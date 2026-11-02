@@ -10,6 +10,7 @@ const model = @import("model.zig");
 const theme = @import("theme.zig");
 const kit = @import("view_kit.zig");
 const menubar = @import("menubar.zig");
+const log = @import("log.zig");
 const App = @import("app.zig").App;
 
 const pad = 16;
@@ -31,6 +32,7 @@ pub fn view(a: *App, c: *ui.Context) void {
     c.theme = theme.ui(dark);
     const k = theme.colors(dark);
     c.frameIn(a.tick(if (a.clock) |f| f() else c.time));
+    log.frameDrawn("panel", if (a.settings_open) "settings" else "panel", a.sampler.procs.items.len, a.rows.items.len, c.stats.instances, c.renderer, "", c.size.w, c.size.h, c.time);
     a.icons.frame();
     const root = ui.div(c).column().sizeFull().bg(k.card).px(pad).pt(14).pb(12).gap(12);
     defer root.end();

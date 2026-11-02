@@ -205,11 +205,31 @@ Apple's private interfaces.
   Quit posts WM_CLOSE to the process's windows, and Force Quit ends it.
 - **Close**: Escape closes the open sheet or menu, then clears the selection.
 
+## Log
+
+nanomon keeps a log of what it samples and draws, to see why it misbehaves:
+`%LOCALAPPDATA%\nanomon\nanomon.log` on Windows,
+`~/Library/Logs/nanomon.log` on macOS, and
+`~/.local/state/nanomon/nanomon.log` on Linux. Each run starts a fresh file
+and keeps the run before as `nanomon.log.1`; lines are appended as they
+happen, so the last line says how far the run got. `NANOMON_LOG=<path>`
+writes elsewhere, and `NANOMON_LOG=off` turns the log off.
+
+A `frame` line says how big the window was, which renderer draws it, how many
+draws the view made, and (on Windows) the swap chain it presents through and
+what the last present answered: a window that goes blank is then either a view
+that stopped filling it or a window that stopped showing it. Warnings and
+errors from nanoui — a Direct3D call that failed, a swap chain that was lost, a
+size a paint had to correct itself — go to the same file, since a GUI app has
+no stderr anyone reads. `NANOUI_TRACE=1`, with stderr redirected to a file,
+adds every size, frame and paint the backend handles.
+
 ## Files
 
 ```
 src/main.zig          the window and the menu bar
 src/menubar.zig       the menu bar readout (a template image) and its panel (macOS)
+src/log.zig           the log of what nanomon samples and draws
 src/view_popover.zig  the panel under the menu bar
 src/app.zig           state: sampling, order, search, selection, quitting
 src/model.zig         processes, the system, sorting, formatting

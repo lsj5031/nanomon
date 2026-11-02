@@ -6,6 +6,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 const model = @import("model.zig");
 const Process = model.Process;
+const log = @import("log.zig");
 
 pub const os = switch (builtin.os.tag) {
     .macos => @import("sample_mac.zig"),
@@ -131,6 +132,7 @@ pub const Sampler = struct {
     pub fn sample(s: *Sampler, now: f64) void {
         s.procs.clearRetainingCapacity();
         const ticks = os.collect(s);
+        if (s.procs.items.len == 0) log.warn("sample: no processes read", .{});
         const wall = now - s.prev_wall;
         var next: std.AutoHashMapUnmanaged(i32, Prev) = .empty;
         next.ensureTotalCapacity(s.gpa, @intCast(s.procs.items.len)) catch {};

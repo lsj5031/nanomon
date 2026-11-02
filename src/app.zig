@@ -8,6 +8,7 @@ const sample = @import("sample.zig");
 const icons = @import("icons.zig");
 const nanoui = @import("nanoui");
 const builtin = @import("builtin");
+const log = @import("log.zig");
 
 extern "c" fn kill(pid: c_int, sig: c_int) c_int;
 extern "c" fn getuid() c_uint;
@@ -193,11 +194,13 @@ pub const App = struct {
             win_frame.install(a.window.?.hwnd);
         }
         a.window.?.focus();
+        log.info("window opened", .{});
     }
 
     fn windowClosed(ctx: *anyopaque, _: *nanoui.Window) void {
         const a: *App = @ptrCast(@alignCast(ctx));
         a.window = null;
+        log.info("window closed", .{});
     }
 
     /// The menu bar panel's height for what it shows.
@@ -228,6 +231,7 @@ pub const App = struct {
 
     /// Samples when it is time; returns the seconds until the next.
     pub fn tick(a: *App, now: f64) f32 {
+        var sampled = false;
         if (a.paused) {
             if (a.dirty) a.order();
             return 3600;
@@ -236,6 +240,7 @@ pub const App = struct {
             a.sampler.sample(now);
             a.last = now;
             a.dirty = true;
+            sampled = true;
             // The first percentages soon, not a whole interval later.
             if (a.sampler.samples == 1) a.last = now - interval + 0.6;
         }
@@ -246,6 +251,15 @@ pub const App = struct {
             a.dirty = true;
         }
         if (a.dirty) a.order();
+        if (sampled) log.info("sample {d}: {d} processes, {d} rows, cpu {d:.0}%, app memory {d} MiB, page {s}, filter {s}", .{
+            a.sampler.samples,
+            a.sampler.procs.items.len,
+            a.rows.items.len,
+            a.sampler.system.cpu_user + a.sampler.system.cpu_system,
+            a.sampler.system.mem_app / (1 << 20),
+            @tagName(a.page),
+            @tagName(a.filter),
+        });
         return @floatCast(@max(0.05, interval - (now - a.last)));
     }
 
@@ -259,7 +273,10 @@ pub const App = struct {
         for (procs, 0..) |p, i| {
             if (!shown(a, p)) continue;
             if (q.len > 0 and !matches(p, q)) continue;
-            a.rows.append(a.sampler.gpa, @intCast(i)) catch return;
+            a.rows.append(a.sampler.gpa, @intCast(i)) catch |e| {
+                log.err("table: {d} rows of {d} processes: {t}", .{ a.rows.items.len, procs.len, e });
+                return;
+            };
         }
         a.group();
     }
@@ -275,11 +292,17 @@ pub const App = struct {
             if (p.bundle.len == 0) continue;
             // Helpers inside an app count as the outermost app.
             const outer = outerBundle(p.bundle);
-            const gop = at.getOrPut(gpa, outer) catch return;
+            const gop = at.getOrPut(gpa, outer) catch |e| {
+                log.err("apps: {d} apps of {d} processes: {t}", .{ a.apps.items.len, a.sampler.procs.items.len, e });
+                return;
+            };
             if (!gop.found_existing) {
                 gop.value_ptr.* = a.apps.items.len;
                 const name = std.fs.path.stem(outer);
-                a.apps.append(gpa, .{ .name = name, .bundle = outer, .pid = p.pid }) catch return;
+                a.apps.append(gpa, .{ .name = name, .bundle = outer, .pid = p.pid }) catch |e| {
+                    log.err("apps: {d} apps of {d} processes: {t}", .{ a.apps.items.len, a.sampler.procs.items.len, e });
+                    return;
+                };
             }
             const r = &a.apps.items[gop.value_ptr.*];
             r.processes += 1;

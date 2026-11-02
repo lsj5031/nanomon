@@ -7,6 +7,7 @@ const std = @import("std");
 const nanoui = @import("nanoui");
 const ui = nanoui.ui;
 const theme = @import("theme.zig");
+const log = @import("log.zig");
 const side = @import("view_side.zig");
 const sheet = @import("view_sheet.zig");
 const kit = @import("view_kit.zig");
@@ -29,6 +30,8 @@ pub fn view(a: *App, c: *ui.Context) void {
     const k = theme.colors(dark);
     // The next sample, and only then, unless something animates.
     c.frameIn(a.tick(if (a.clock) |f| f() else c.time));
+    var detail_buf: [80]u8 = undefined;
+    log.frameDrawn("window", @tagName(a.page), a.sampler.procs.items.len, a.rows.items.len, c.stats.instances, c.renderer, surfaceDetail(a, &detail_buf), c.size.w, c.size.h, c.time);
     a.icons.frame();
     // The headers' empty space moves the window, as a title bar's does.
     c.title_bar_height = kit.header_h;
@@ -61,6 +64,20 @@ pub fn view(a: *App, c: *ui.Context) void {
     sheet.confirmMarked(c, a, k);
     // Icons left for later frames, a few a frame.
     if (a.icons.pending) c.frameIn(1.0 / 60.0);
+}
+
+/// What the window's own layer is doing, for the frame log: the swap chain
+/// it presents through, and what the last present answered. With the view's
+/// size and draws on the same line, a window that went blank says whether
+/// the view stopped filling it or the window stopped showing it.
+fn surfaceDetail(a: *App, buf: []u8) []const u8 {
+    if (comptime @import("builtin").os.tag != .windows) return "";
+    // The first frame is built while the window is still being made.
+    const win = a.window orelse return "";
+    const s = win.surface orelse return "";
+    if (s.no_d3d) return "no Direct3D";
+    const p = s.presenter orelse return "no swap chain yet";
+    return std.fmt.bufPrint(buf, "chain {d}x{d} px, present 0x{x:0>8}", .{ p.width, p.height, p.last_hr }) catch "";
 }
 
 /// The page under the header, scrolling: cards with room between.
