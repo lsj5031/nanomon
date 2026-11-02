@@ -1,15 +1,11 @@
-<p align="center">
-  <img src="docs/images/overview-graff-dark.png" alt="nanomon's overview in Codegraff Dark, with graff suggesting what to quit" width="760">
-</p>
-
 <h1 align="center">nanomon</h1>
 
-<p align="center">A small, smooth activity monitor for your Mac, with graff in the corner.</p>
+<p align="center">A small, smooth activity monitor for macOS, Linux and Windows.</p>
 
 <p align="center">Built on <a href="https://github.com/justrach/nanoui"><strong>nanoui</strong></a>, in Harness's Codegraff colors.</p>
 
 <p align="center">
-  <img alt="macOS · Linux" src="https://img.shields.io/badge/macOS%20·%20Linux-555">
+  <img alt="macOS · Linux · Windows" src="https://img.shields.io/badge/macOS%20·%20Linux%20·%20Windows-555">
   <img alt="One binary, under 1 MB" src="https://img.shields.io/badge/one%20binary-%3C1%20MB-44cc11">
   <img alt="No admin rights" src="https://img.shields.io/badge/admin%20rights-none-44cc11">
   <img alt="Built in Zig 0.17" src="https://img.shields.io/badge/built%20in-Zig%200.17-f7a41d?logo=zig&logoColor=white">
@@ -79,13 +75,6 @@ zig build run --fork=../..
   all) to mark processes, then quit them together. The sheet names them
   first. Processes that aren't yours stay marked, and nanomon never
   signals itself, launchd or the kernel.
-- **graff:** the amber bubble in the corner asks graff about the machine
-  ("What's slowing my Mac down?", "Should I quit the 3 marked?"). It runs
-  `graff -p --no-local-tools` from an empty temporary directory, so graff
-  can answer but not act. graff sees the system's figures and the busiest
-  and largest processes. If it names processes to quit, only your own are
-  offered, as "Mark N to quit"; quitting them is still your call. Asking
-  uses your graff account like any other graff run.
 - **CPU:** the processor's load over a cell graph (system rust under user
   amber); each core's load with fast and frugal cores apart; load
   averages against the core count, tasks, threads and uptime.
@@ -248,9 +237,7 @@ src/view_io.zig       disk and network
 src/view_apps.zig     apps
 src/view_about.zig    About This Mac
 src/view_sheet.zig    the filter menu, the inspector, the quit sheets
-src/view_graff.zig    the graff bubble and what it tells graff
-src/graff.zig         running graff one-shot, reading its answer
-src/tests_select.zig  marking, quitting together, the bubble (a fake graff)
+src/tests_select.zig  marking processes and quitting them together
 src/theme.zig         the colors, light and dark
 src/tests.zig         tests
 src/tests_menubar.zig the panel and the readout
@@ -259,8 +246,7 @@ src/tests_menubar.zig the panel and the readout
 ## License
 
 nanomon's own code is licensed under the [MIT License](LICENSE). The parts derived
-from CodeGraff (its colors, and the graff features, which work only with graff)
-keep CodeGraff's original **modified AGPLv3**, kept verbatim in
+from CodeGraff (its colors) keep CodeGraff's original **modified AGPLv3**, kept verbatim in
 [`third_party/licenses`](third_party/licenses/CodeGraff-LICENSE.txt); see
 [third-party notices](THIRD_PARTY_NOTICES.md).
 
@@ -280,7 +266,6 @@ keep CodeGraff's original **modified AGPLv3**, kept verbatim in
   into app, wired, compressed and cached, % CPU as a share of one core, and
   the quit sheet. [rea](https://github.com/morluto/rea) helped show how
   Activity Monitor gets its figures.
-- **[Harness](https://github.com/justrach/harness):** the Codegraff colors,
-  and [graff](https://github.com/justrach/codegraff), the agent in the bubble.
+- **[Harness](https://github.com/justrach/harness):** the Codegraff colors.
 
 <p align="center"><sub>Built in Zig 0.17 on <a href="https://github.com/justrach/nanoui">nanoui</a> · <a href="LICENSE">MIT</a> · <a href="THIRD_PARTY_NOTICES.md">third-party notices</a></sub></p>

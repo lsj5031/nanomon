@@ -58,6 +58,7 @@ const NCCALCSIZE_PARAMS = extern struct {
     pos: ?*anyopaque,
 };
 
+const WM_SETICON = 0x0080;
 const WM_NCCALCSIZE = 0x0083;
 const WM_NCHITTEST = 0x0084;
 const GWLP_WNDPROC = -4;
@@ -82,6 +83,12 @@ const ht_bottom = 15;
 const ht_bottom_left = 16;
 const ht_bottom_right = 17;
 
+/// The icon's resource, as nanomon.rc names it.
+const icon_resource: ?*const anyopaque = @ptrFromInt(1);
+const image_icon = 1;
+const sm_cxicon = 11;
+const sm_cxsmicon = 49;
+
 extern "user32" fn GetWindowLongPtrW(h: HWND, index: i32) callconv(.winapi) isize;
 extern "user32" fn SetWindowLongPtrW(h: HWND, index: i32, value: isize) callconv(.winapi) isize;
 extern "user32" fn CallWindowProcW(prev: WNDPROC, h: HWND, msg: u32, wp: WPARAM, lp: LPARAM) callconv(.winapi) LRESULT;
@@ -90,6 +97,10 @@ extern "user32" fn ScreenToClient(h: HWND, p: *POINT) callconv(.winapi) i32;
 extern "user32" fn SetWindowPos(h: HWND, after: ?HWND, x: i32, y: i32, cx: i32, cy: i32, flags: u32) callconv(.winapi) i32;
 extern "user32" fn IsZoomed(h: HWND) callconv(.winapi) i32;
 extern "user32" fn GetDpiForWindow(h: HWND) callconv(.winapi) u32;
+extern "user32" fn GetSystemMetricsForDpi(index: i32, dpi: u32) callconv(.winapi) i32;
+extern "user32" fn LoadImageW(instance: ?*anyopaque, name: ?*const anyopaque, kind: u32, cx: i32, cy: i32, load: u32) callconv(.winapi) ?*anyopaque;
+extern "user32" fn SendMessageW(h: HWND, msg: u32, wp: WPARAM, lp: LPARAM) callconv(.winapi) LRESULT;
+extern "kernel32" fn GetModuleHandleW(name: ?[*:0]const u16) callconv(.winapi) ?*anyopaque;
 extern "user32" fn MonitorFromWindow(h: HWND, flags: u32) callconv(.winapi) ?HWND;
 extern "user32" fn GetMonitorInfoW(m: HWND, info: *MONITORINFO) callconv(.winapi) i32;
 extern "dwmapi" fn DwmExtendFrameIntoClientArea(h: HWND, margins: *const MARGINS) callconv(.winapi) i32;
@@ -115,6 +126,20 @@ pub fn install(hwnd: ?HWND) void {
     prev_proc = @ptrFromInt(@as(usize, @bitCast(prev)));
     // The frame is worked out again with the new procedure in place.
     _ = SetWindowPos(h, null, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
+    setIcon(h);
+}
+
+/// The window's icon in the taskbar, Alt-Tab and its corner: the exe's own
+/// (assets/nanomon.rc), at the sizes the display's DPI asks for.
+fn setIcon(h: HWND) void {
+    const instance = GetModuleHandleW(null) orelse return;
+    const dpi = GetDpiForWindow(h);
+    const big = GetSystemMetricsForDpi(sm_cxicon, dpi);
+    const small = GetSystemMetricsForDpi(sm_cxsmicon, dpi);
+    if (LoadImageW(instance, icon_resource, image_icon, big, big, 0)) |icon|
+        _ = SendMessageW(h, WM_SETICON, 1, @bitCast(@intFromPtr(icon)));
+    if (LoadImageW(instance, icon_resource, image_icon, small, small, 0)) |icon|
+        _ = SendMessageW(h, WM_SETICON, 0, @bitCast(@intFromPtr(icon)));
 }
 
 fn proc(h: HWND, msg: u32, wp: WPARAM, lp: LPARAM) callconv(.winapi) LRESULT {

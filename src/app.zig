@@ -117,8 +117,6 @@ pub const App = struct {
     notice_until: f64 = 0,
     /// The clock as the view last saw it.
     now: f64 = 0,
-    /// The graff bubble.
-    graff: @import("graff.zig").Graff = .{},
     /// How a signal is sent (tests record instead).
     send: *const fn (pid: c_int, sig: c_int) callconv(.c) c_int = sendSignal,
     filter: Filter = .all,
@@ -167,7 +165,6 @@ pub const App = struct {
     pub fn listen(a: *App, window: ?*nanoui.Window) void {
         a.window = window;
         a.sampler.on_update = .{ .ctx = a, .func = answered };
-        a.graff.notify = .{ .ctx = a, .func = graffAnswered };
     }
 
     /// Opens the window (again, once closed: nanomon stays in the menu bar).
@@ -208,8 +205,8 @@ pub const App = struct {
         return @import("view_popover.zig").height(a);
     }
 
-    /// Draws again: an answer came, or an update is ready.
-    pub fn graffAnswered(ctx: *anyopaque) void {
+    /// Draws again: an update is ready.
+    pub fn redraw(ctx: *anyopaque) void {
         const a: *App = @ptrCast(@alignCast(ctx));
         if (a.window) |w| w.redraw();
     }
@@ -225,7 +222,6 @@ pub const App = struct {
         a.rows.deinit(a.sampler.gpa);
         a.apps.deinit(a.sampler.gpa);
         a.marked.deinit(a.sampler.gpa);
-        a.graff.deinit(a.sampler.gpa);
         a.icons.deinit();
         a.sampler.deinit();
     }

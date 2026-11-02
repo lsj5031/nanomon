@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="nanomon">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a261e"/>
+      <stop offset="1" stop-color="#16140f"/>
+    </linearGradient>
+  </defs>
+  <!-- Apple's icon grid: an 824-point square, corners of about 185. -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)" stroke="#3a352b" stroke-width="4"/>
+  <!-- A small cell graph: rust is the system, amber the user, the rest empty. -->
+  <g fill="#2c2820">
+    <rect x="241" y="261" width="62" height="62" rx="12"/>
+    <rect x="241" y="341" width="62" height="62" rx="12"/>
+    <rect x="241" y="421" width="62" height="62" rx="12"/>
+    <rect x="241" y="501" width="62" height="62" rx="12"/>
+    <rect x="241" y="581" width="62" height="62" rx="12"/>
+    <rect x="321" y="261" width="62" height="62" rx="12"/>
+    <rect x="321" y="341" width="62" height="62" rx="12"/>
+    <rect x="321" y="421" width="62" height="62" rx="12"/>
+    <rect x="321" y="501" width="62" height="62" rx="12"/>
+    <rect x="401" y="261" width="62" height="62" rx="12"/>
+    <rect x="401" y="341" width="62" height="62" rx="12"/>
+    <rect x="401" y="421" width="62" height="62" rx="12"/>
+    <rect x="481" y="261" width="62" height="62" rx="12"/>
+    <rect x="481" y="341" width="62" height="62" rx="12"/>
+    <rect x="561" y="261" width="62" height="62" rx="12"/>
+    <rect x="561" y="341" width="62" height="62" rx="12"/>
+    <rect x="721" y="261" width="62" height="62" rx="12"/>
+    <rect x="721" y="341" width="62" height="62" rx="12"/>
+    <rect x="721" y="421" width="62" height="62" rx="12"/>
+  </g>
+  <g fill="#d2674f">
+    <rect x="241" y="741" width="62" height="62" rx="12"/>
+    <rect x="321" y="741" width="62" height="62" rx="12"/>
+    <rect x="401" y="661" width="62" height="62" rx="12"/>
+    <rect x="401" y="741" width="62" height="62" rx="12"/>
+    <rect x="481" y="741" width="62" height="62" rx="12"/>
+    <rect x="561" y="661" width="62" height="62" rx="12"/>
+    <rect x="561" y="741" width="62" height="62" rx="12"/>
+    <rect x="641" y="661" width="62" height="62" rx="12"/>
+    <rect x="641" y="741" width="62" height="62" rx="12"/>
+    <rect x="721" y="741" width="62" height="62" rx="12"/>
+  </g>
+  <g fill="#e8a33d">
+    <rect x="241" y="661" width="62" height="62" rx="12"/>
+    <rect x="321" y="581" width="62" height="62" rx="12"/>
+    <rect x="321" y="661" width="62" height="62" rx="12"/>
+    <rect x="401" y="501" width="62" height="62" rx="12"/>
+    <rect x="401" y="581" width="62" height="62" rx="12"/>
+    <rect x="481" y="421" width="62" height="62" rx="12"/>
+    <rect x="481" y="501" width="62" height="62" rx="12"/>
+    <rect x="481" y="581" width="62" height="62" rx="12"/>
+    <rect x="481" y="661" width="62" height="62" rx="12"/>
+    <rect x="561" y="421" width="62" height="62" rx="12"/>
+    <rect x="561" y="501" width="62" height="62" rx="12"/>
+    <rect x="561" y="581" width="62" height="62" rx="12"/>
+    <rect x="641" y="261" width="62" height="62" rx="12"/>
+    <rect x="641" y="341" width="62" height="62" rx="12"/>
+    <rect x="641" y="421" width="62" height="62" rx="12"/>
+    <rect x="641" y="501" width="62" height="62" rx="12"/>
+    <rect x="641" y="581" width="62" height="62" rx="12"/>
+    <rect x="721" y="501" width="62" height="62" rx="12"/>
+    <rect x="721" y="581" width="62" height="62" rx="12"/>
+    <rect x="721" y="661" width="62" height="62" rx="12"/>
+  </g>
+</svg>

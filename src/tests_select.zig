@@ -1,6 +1,5 @@
-//! Marking processes and quitting them together, and the graff bubble,
-//! through the Tester. No signal is sent: the app's `send` records them;
-//! graff is a script that answers and notes how it was started.
+//! Marking processes and quitting them together, through the Tester. No
+//! signal is sent: the app's `send` records them.
 const std = @import("std");
 const builtin = @import("builtin");
 const nanoui = @import("nanoui");
@@ -92,73 +91,6 @@ test "nanomon itself, launchd and the kernel are never signaled" {
     if (builtin.os.tag == .windows) {
         try std.testing.expect(App.untouchable(@import("sample.zig").os.selfPid()));
     } else try std.testing.expect(App.untouchable(std.c.getpid()));
-}
-
-test "the graff bubble asks graff, shows its answer, and marks only what may be quit" {
-    if (!@import("graff.zig").supported) return error.SkipZigTest;
-    const gpa = std.testing.allocator;
-    const io = std.testing.io;
-    var tmp = std.testing.tmpDir(.{});
-    defer tmp.cleanup();
-    // A graff that notes its arguments and directory, then answers.
-    const script =
-        \\#!/bin/sh
-        \\echo "$@" > "$NOTE"
-        \\pwd >> "$NOTE"
-        \\echo "Safari Web Content and Mail are idle but large."
-        \\echo "Quitting Mail frees 200 MB; launchd must stay."
-        \\echo ""
-        \\echo "KILL: 990003, 990001, 1"
-        \\
-    ;
-    var dir_buf: [512]u8 = undefined;
-    const dir = dir_buf[0..try tmp.dir.realPath(io, &dir_buf)];
-    var path_buf: [600]u8 = undefined;
-    const fake_path = try std.fmt.bufPrint(&path_buf, "{s}/graff", .{dir});
-    var note_buf: [600]u8 = undefined;
-    const note = try std.fmt.bufPrint(&note_buf, "{s}/note", .{dir});
-    // The script reads where to note from its name's directory.
-    const body = try std.mem.replaceOwned(u8, gpa, script, "$NOTE", note);
-    defer gpa.free(body);
-    try tmp.dir.writeFile(io, .{ .sub_path = "graff", .data = body, .flags = .{ .permissions = .fromMode(0o755) } });
-
-    var a: App = .init(gpa, io);
-    defer a.deinit();
-    try t_mod.fake(&a);
-    a.graff.program = fake_path;
-    var t: ui.Tester = undefined;
-    try t.init(gpa, .init(&a, view.view), .{ .width = 1100, .height = 760, .theme = theme.ui(true) });
-    defer t.deinit();
-    a.dark = true;
-    t.settle(1);
-    // The bubble at the corner opens the panel.
-    t.click(1100 - 18 - 23, 760 - 18 - 23);
-    t.settle(1);
-    try std.testing.expect(a.graff.open and t.hasText("What can I safely quit?"));
-    try t.screenshot("/tmp/nanomon-graff-open.png");
-    try t_mod.open(&t, "What can I safely quit?");
-    var waited: f64 = 0;
-    while (a.graff.state == .running and waited < 10) : (waited += 0.05) {
-        nanoui.runFor(0.05);
-        t.frame();
-    }
-    try std.testing.expectEqual(@import("graff.zig").State.done, a.graff.state);
-    t.settle(1);
-    try std.testing.expect(t.containsText("Quitting Mail frees 200 MB"));
-    try std.testing.expect(!t.containsText("KILL:"));
-    // Only Mail: launchd (1) and root's process are left out.
-    try std.testing.expect(t.hasText("Mark 1 to quit"));
-    try t.screenshot("/tmp/nanomon-graff-answer.png");
-    // It was asked one-shot, its tools off, from a directory of its own,
-    // which is gone now.
-    var nb: [4096]u8 = undefined;
-    const noted = try tmp.dir.readFile(io, "note", &nb);
-    try std.testing.expect(std.mem.indexOf(u8, noted, "-p --no-local-tools") != null);
-    try std.testing.expect(std.mem.indexOf(u8, noted, "nanomon-graff-") != null);
-    try std.testing.expect(std.mem.indexOf(u8, noted, "What can I safely quit?") != null);
-    try t_mod.open(&t, "Mark 1 to quit");
-    try std.testing.expect(a.marked.contains(990003) and a.marked.count() == 1);
-    try std.testing.expectEqual(app_mod.Page.processes, a.page);
 }
 
 test "a ready update shows in the sidebar; one that can't install keeps nanomon running" {

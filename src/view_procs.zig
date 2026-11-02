@@ -1,7 +1,7 @@
 //! The Processes page: which processes show (a menu: all, the user's,
 //! the system's), the table's columns (CPU, Memory, Disk), the search,
 //! Inspect and Quit; under them, the table (view_table.zig), and when
-//! processes are marked, a bar to quit them together or ask graff.
+//! processes are marked, a bar to quit them together.
 const std = @import("std");
 const nanoui = @import("nanoui");
 const ui = nanoui.ui;
@@ -57,7 +57,6 @@ fn actions(c: *ui.Context, a: *App, k: theme.Colors) void {
     ui.spacer(c);
     if (notice) |n| ui.text(c, n, .{ .size = 11.5, .color = k.secondary });
     if (ui.button(c, "Clear", .{ .variant = .ghost, .size = 12 }).clicked) a.marked.clearRetainingCapacity();
-    if (ui.button(c, "Ask graff", .{ .variant = .secondary, .size = 12, .icon = "sparkles" }).clicked) @import("view_graff.zig").askAboutMarked(c, a);
     if (ui.button(c, c.print("Quit {d}…", .{sum.count}), .{ .variant = .primary, .size = 12 }).clicked) a.confirm_marked = true;
 }
 

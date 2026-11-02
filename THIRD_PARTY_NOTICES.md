@@ -17,9 +17,6 @@ nanomon uses these from [CodeGraff](https://github.com/justrach/codegraff) and
 
 - **The Codegraff Dark and Light palettes** (`src/theme.zig`), after
   [Harness](https://github.com/justrach/harness).
-- **graff in the bubble**: nanomon runs the `graff` you have installed as its
-  own program (`graff -p --no-local-tools`). It does not bundle or modify
-  graff.
 
 These parts are derived from CodeGraff and come under the license CodeGraff
 ships with: CodeGraff's **modified GNU AGPLv3**, Copyright (C) 2026 Rach
@@ -30,8 +27,5 @@ here as the original, verbatim, in
 [`389b261`](https://github.com/justrach/codegraff/blob/389b26182fef0b8070d9a976505286d693876b6c/LICENSE)).
 Harness is distributed under the same modified AGPLv3 terms.
 
-The graff features work only with graff, which you install separately under
-that license. Without graff installed, the bubble says graff isn't installed; the rest of nanomon works as usual.
-
-nanomon's MIT license covers nanomon's own code. It does not extend to CodeGraff,
-Harness or graff.
+nanomon's MIT license covers nanomon's own code. It does not extend to CodeGraff
+or Harness.

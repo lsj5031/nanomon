@@ -26,7 +26,7 @@ pub fn main(init: std.process.Init) !void {
             .repo = "justrach/nanomon",
             .asset = "nanomon-macos-arm64.zip",
             .name = "nanomon",
-            .changed = .{ .ctx = &a, .func = App.graffAnswered },
+            .changed = .{ .ctx = &a, .func = App.redraw },
         });
     }
     // Freed after the app runs: its sidebar and the update callback hold it.

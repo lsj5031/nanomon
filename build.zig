@@ -14,20 +14,13 @@ pub fn build(b: *std.Build) void {
     const mac = target.result.os.tag == .macos;
     if (mac) mod.linkFramework("IOKit", .{});
     const exe = b.addExecutable(.{ .name = "nanomon", .root_module = mod });
+    // Explorer's, the taskbar's and Alt-Tab's icon comes from the exe's own
+    // resources; win_frame.zig sets the window's from the same.
+    if (target.result.os.tag == .windows) exe.root_module.addWin32ResourceFile(.{ .file = b.path("assets/nanomon.rc") });
     b.installArtifact(exe);
     const run = b.addRunArtifact(exe);
     run.addPassthruArgs();
     b.step("run", "Run nanomon").dependOn(&run.step);
-
-    // A video of nanoui, rendered offscreen (src/video.zig).
-    const video = b.addExecutable(.{ .name = "nanomon-video", .root_module = b.createModule(.{
-        .root_source_file = b.path("src/video.zig"),
-        .target = target,
-        .optimize = optimize,
-        .imports = &.{.{ .name = "nanoui", .module = nanoui }},
-    }) });
-    if (mac) video.root_module.linkFramework("IOKit", .{});
-    b.step("video", "Build zig-out/bin/nanomon-video").dependOn(&b.addInstallArtifact(video, .{}).step);
 
     const tests = b.addTest(.{ .root_module = b.createModule(.{
         .root_source_file = b.path("src/tests.zig"),
