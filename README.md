@@ -220,7 +220,8 @@ draws the view made, and (on Windows) the swap chain it presents through and
 what the last present answered: a window that goes blank is then either a view
 that stopped filling it or a window that stopped showing it. Warnings and
 errors from nanoui — a Direct3D call that failed, a swap chain that was lost, a
-size a paint had to correct itself — go to the same file, since a GUI app has
+size a paint had to correct itself, a client area that was not the window's and
+had to be worked out again — go to the same file, since a GUI app has
 no stderr anyone reads. `NANOUI_TRACE=1`, with stderr redirected to a file,
 adds every size, frame and paint the backend handles.
 
