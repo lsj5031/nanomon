@@ -14,9 +14,14 @@ pub fn build(b: *std.Build) void {
     const mac = target.result.os.tag == .macos;
     if (mac) mod.linkFramework("IOKit", .{});
     const exe = b.addExecutable(.{ .name = "nanomon", .root_module = mod });
-    // Explorer's, the taskbar's and Alt-Tab's icon comes from the exe's own
-    // resources; win_frame.zig sets the window's from the same.
-    if (target.result.os.tag == .windows) exe.root_module.addWin32ResourceFile(.{ .file = b.path("assets/nanomon.rc") });
+    if (target.result.os.tag == .windows) {
+        // Explorer's, the taskbar's and Alt-Tab's icon comes from the exe's own
+        // resources; win_frame.zig sets the window's from the same.
+        exe.root_module.addWin32ResourceFile(.{ .file = b.path("assets/nanomon.rc") });
+        // A window, not a console: double-clicking it opens no terminal, and the
+        // log takes what a console would have shown.
+        exe.subsystem = .windows;
+    }
     b.installArtifact(exe);
     const run = b.addRunArtifact(exe);
     run.addPassthruArgs();
