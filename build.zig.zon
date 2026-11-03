@@ -1,11 +1,15 @@
 .{
     .name = .nanomon,
-    .version = "0.1.6",
+    .version = "0.1.9",
     .fingerprint = 0xc86a790451c16db9,
     .minimum_zig_version = "0.17.0",
     .dependencies = .{
+        // The nanoui this branch is built against; its Windows work isn't
+        // upstream yet. After moving that checkout, pin the new commit with
+        // `zig fetch --save=nanoui git+https://github.com/lsj5031/nanoui#<sha>`.
         .nanoui = .{
-            .path = "../nanoui",
+            .url = "git+https://github.com/lsj5031/nanoui#7d4424b1046f8bbab365b42f61d00f1934d4dcc8",
+            .hash = "nanoui-0.9.2-we0KMaDEIgBx6kJQXZv5ksj1YOb655O9YOgGd-2YD3c5",
         },
     },
     .paths = .{ "build.zig", "build.zig.zon", "src" },
