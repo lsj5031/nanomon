@@ -4,6 +4,7 @@
 //! each app holds, as a row of cards and as a list. And the GPU page: its
 //! load across the range, the renderer and tiler apart, and its memory.
 const std = @import("std");
+const builtin = @import("builtin");
 const nanoui = @import("nanoui");
 const ui = nanoui.ui;
 const model = @import("model.zig");
@@ -12,6 +13,9 @@ const kit = @import("view_kit.zig");
 const view = @import("view.zig");
 const app_mod = @import("app.zig");
 const App = app_mod.App;
+
+const wired_name = if (builtin.os.tag == .windows) "Non-paged Pool" else "Wired";
+const renderer_name = if (builtin.os.tag == .windows) "3D" else "Renderer";
 
 fn usedPercent(sy: model.System) f32 {
     if (sy.mem_total == 0) return 0;
@@ -56,8 +60,8 @@ pub fn usage(c: *ui.Context, a: *App, k: theme.Colors, h: f32) void {
     {
         const t = kit.title(c, "memorychip", "Memory Usage", k.green);
         defer t.end();
-        if (!kit.readout(c, k, a, .memory, &.{ "App", "Wired", "Compressed" }, kit.percent))
-            kit.legend(c, k, &.{ .{ "App", k.green }, .{ "Wired", k.orange }, .{ "Compressed", k.purple } });
+        if (!kit.readout(c, k, a, .memory, &.{ "App", wired_name, "Compressed" }, kit.percent))
+            kit.legend(c, k, &.{ .{ "App", k.green }, .{ wired_name, k.orange }, .{ "Compressed", k.purple } });
     }
     var b: [4][32]u8 = undefined;
     {
@@ -65,7 +69,7 @@ pub fn usage(c: *ui.Context, a: *App, k: theme.Colors, h: f32) void {
         defer r.end();
         kit.big(c, k, "In use", c.print("{d:.0}", .{usedPercent(sy)}), "%");
         kit.stat(c, k, "App Memory", c.print("{s}", .{model.bytes(&b[0], sy.mem_app)}), "");
-        kit.stat(c, k, "Wired", c.print("{s}", .{model.bytes(&b[1], sy.mem_wired)}), "");
+        kit.stat(c, k, wired_name, c.print("{s}", .{model.bytes(&b[1], sy.mem_wired)}), "");
         kit.stat(c, k, "Compressed", c.print("{s}", .{model.bytes(&b[2], sy.mem_compressed)}), "");
         kit.stat(c, k, "Cached Files", c.print("{s}", .{model.bytes(&b[3], sy.mem_cached)}), c.print("swap {s}", .{model.bytes(&b[0], sy.swap_used)}));
     }
@@ -101,7 +105,7 @@ fn byType(c: *ui.Context, a: *App, k: theme.Colors) void {
         // What is available already counts the cache; the rest is free.
         const free = sy.mem_total -| sy.memUsed() -| sy.mem_cached;
         kit.line(c, k, "App", c.print("{s}", .{model.bytes(&b[0], sy.mem_app)}), k.green);
-        kit.line(c, k, "Wired", c.print("{s}", .{model.bytes(&b[1], sy.mem_wired)}), k.orange);
+        kit.line(c, k, wired_name, c.print("{s}", .{model.bytes(&b[1], sy.mem_wired)}), k.orange);
         kit.line(c, k, "Compressed", c.print("{s}", .{model.bytes(&b[2], sy.mem_compressed)}), k.purple);
         kit.line(c, k, "Cached", c.print("{s}", .{model.bytes(&b[3], sy.mem_cached)}), k.gray);
         kit.line(c, k, "Free", c.print("{s}", .{model.bytes(&b[4], free)}), k.tertiary);
@@ -153,7 +157,7 @@ fn swap(c: *ui.Context, a: *App, k: theme.Colors) void {
         }
     } else kit.line(c, k, "In use", c.print("{s}", .{model.bytes(&b[0], sy.swap_used)}), null);
     kit.line(c, k, "Compressed", c.print("{s}", .{model.bytes(&b[2], sy.mem_compressed)}), null);
-    ui.text(c, "Memory Windows compressed to hold more, in place of writing it out.", .{ .size = 10.5, .color = k.tertiary, .wrap = true });
+    ui.text(c, "Memory the system compressed to hold more, in place of writing it out.", .{ .size = 10.5, .color = k.tertiary, .wrap = true });
 }
 
 /// An app's icon at `size` points, or a placeholder.
@@ -301,8 +305,13 @@ pub fn gpuPage(c: *ui.Context, a: *App, k: theme.Colors) void {
         defer t.end();
     }
     var b: [32]u8 = undefined;
-    const lines = [_]struct { []const u8, f32 }{ .{ "Device", sy.gpu }, .{ "Renderer", sy.gpu_renderer }, .{ "Tiler", sy.gpu_tiler } };
-    for (lines) |l| {
+    const lines = [_]struct { []const u8, f32 }{ .{ "Device", sy.gpu }, .{ renderer_name, sy.gpu_renderer }, .{ "Tiler", sy.gpu_tiler } };
+    const n: usize = switch (builtin.os.tag) {
+        .macos => 3,
+        .windows => 2,
+        else => 1,
+    };
+    for (lines[0..n]) |l| {
         ui.key(c, l[0]);
         const r = ui.div(c).row().wFull().gap(12).itemsCenter().h(22);
         defer r.end();
@@ -333,8 +342,10 @@ pub fn gpuLoad(c: *ui.Context, a: *App, k: theme.Colors, h: f32) void {
         const r = ui.div(c).row().wFull().gap(16).itemsStart();
         defer r.end();
         kit.big(c, k, "Now", c.print("{d:.0}", .{sy.gpu}), "%");
-        kit.stat(c, k, "Renderer", c.print("{d:.0}%", .{sy.gpu_renderer}), "");
-        kit.stat(c, k, "Tiler", c.print("{d:.0}%", .{sy.gpu_tiler}), "");
+        if (builtin.os.tag == .macos or builtin.os.tag == .windows)
+            kit.stat(c, k, renderer_name, c.print("{d:.0}%", .{sy.gpu_renderer}), "");
+        if (builtin.os.tag == .macos)
+            kit.stat(c, k, "Tiler", c.print("{d:.0}%", .{sy.gpu_tiler}), "");
         kit.stat(c, k, "Memory", c.print("{s}", .{model.bytes(&b, sy.gpu_memory)}), "in use");
         const n = a.range.samples();
         kit.stat(c, k, "Average", c.print("{d:.0}%", .{@import("view_cpu.zig").mean(s.gpu_history.slice(), n)}), c.print("over {s}", .{a.range.title()}));

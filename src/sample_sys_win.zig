@@ -333,9 +333,12 @@ fn thermal(s: *Sampler) void {
 
 /// One collect, then what the counters say.
 fn counters(s: *Sampler) void {
+    s.system.thermal = null;
+    s.system.cpu_temp = 0;
+    s.system.cpu_temp_max = 0;
     const p = &s.state.pdh;
     const query = open(s) orelse return;
-    _ = PdhCollectQueryData(query);
+    if (PdhCollectQueryData(query) != 0) return;
     gpu(s);
     thermal(s);
     // The counters count pages; the page shows bytes, as Activity Monitor's.

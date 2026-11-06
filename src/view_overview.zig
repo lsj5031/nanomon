@@ -3,6 +3,7 @@
 //! each opening its page; the processes busiest now; and the machine in
 //! a few lines.
 const std = @import("std");
+const builtin = @import("builtin");
 const nanoui = @import("nanoui");
 const ui = nanoui.ui;
 const model = @import("model.zig");
@@ -106,7 +107,7 @@ fn machine(c: *ui.Context, a: *App, k: theme.Colors) void {
     const d = kit.card(c, k).w(320).gap(4);
     defer d.end();
     {
-        const t = kit.title(c, "desktopcomputer", "This Mac", k.gray);
+        const t = kit.title(c, "desktopcomputer", if (builtin.os.tag == .macos) "This Mac" else "This PC", k.gray);
         defer t.end();
     }
     const gap = ui.div(c).row().h(6);

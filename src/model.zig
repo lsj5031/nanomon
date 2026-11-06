@@ -31,9 +31,14 @@ pub const Process = struct {
     disk_read: u64 = 0,
     disk_written: u64 = 0,
 
-    /// Whether nanomon read it itself: threads, wake ups and disk known.
+    /// Whether nanomon read it itself: threads and disk known.
     pub fn detailed(p: Process) bool {
         return p.known and !p.from_ps;
+    }
+
+    /// Only the macOS sampler collects idle wake ups.
+    pub fn hasWakeups(p: Process) bool {
+        return @import("builtin").os.tag == .macos and p.detailed();
     }
 };
 
@@ -82,8 +87,9 @@ pub const System = struct {
     /// Every task and thread on the machine (0 when unknown).
     tasks: u32 = 0,
     threads: u32 = 0,
-    /// How hot the machine runs: 0 nominal, 1 fair, 2 serious, 3 critical.
-    thermal: u8 = 0,
+    /// How hot the machine runs: 0 nominal, 1 fair, 2 serious, 3 critical;
+    /// null when the platform cannot read it.
+    thermal: ?u8 = null,
     /// Degrees Celsius (0: not known): the CPU's mean and its hottest, the
     /// GPU's, and the rest of the chip's.
     cpu_temp: f32 = 0,
@@ -174,7 +180,8 @@ pub fn sort(procs: []Process, key: Sort, ascending: bool) void {
             // Numbers nobody could read go last, whichever the direction.
             const ka, const kb = switch (ctx.key) {
                 .cpu, .time, .memory => .{ a.known, b.known },
-                .threads, .wakeups, .written, .read => .{ a.detailed(), b.detailed() },
+                .threads, .written, .read => .{ a.detailed(), b.detailed() },
+                .wakeups => .{ a.hasWakeups(), b.hasWakeups() },
                 .name, .user, .pid => .{ true, true },
             };
             if (ka != kb) return ka;

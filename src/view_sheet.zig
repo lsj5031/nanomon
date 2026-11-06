@@ -79,7 +79,7 @@ pub fn inspector(c: *ui.Context, a: *App, k: theme.Colors) void {
         .{ "% CPU:", if (known) c.print("{d:.1}", .{p.cpu}) else "–" },
         .{ "CPU Time:", if (known) c.print("{s}", .{model.duration(&b, p.cpu_time_ns)}) else "–" },
         .{ "Threads:", if (detail and p.threads > 0) c.print("{d}", .{p.threads}) else "–" },
-        .{ "Idle Wake Ups:", if (detail) c.print("{d}", .{p.wakeups}) else "–" },
+        .{ "Idle Wake Ups:", if (p.hasWakeups()) c.print("{d}", .{p.wakeups}) else "–" },
         .{ "Memory:", if (known) c.print("{s}", .{model.bytes(&b, p.memory)}) else "–" },
         .{ "Bytes Read:", if (detail) c.print("{s}", .{model.bytes(&b, p.disk_read)}) else "–" },
         .{ "Bytes Written:", if (detail) c.print("{s}", .{model.bytes(&b, p.disk_written)}) else "–" },

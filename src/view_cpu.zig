@@ -41,8 +41,8 @@ pub fn mean(values: []const f32, n: usize) f32 {
     return s / @as(f32, @floatFromInt(v.len));
 }
 
-pub fn thermalName(t: u8) []const u8 {
-    return switch (t) {
+pub fn thermalName(t: ?u8) []const u8 {
+    return switch (t orelse return "Unavailable") {
         0 => "Nominal",
         1 => "Fair",
         2 => "Serious",

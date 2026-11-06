@@ -70,7 +70,7 @@ pub fn open(t: *ui.Tester, name: []const u8) !void {
     t.settle(1);
 }
 
-test "the pages: overview, CPU, memory, GPU, disk, network, apps, this Mac" {
+test "the pages: overview, CPU, memory, GPU, disk, network, apps, about" {
     const gpa = std.testing.allocator;
     var a: App = .init(gpa, std.testing.io);
     defer a.deinit();
@@ -79,7 +79,9 @@ test "the pages: overview, CPU, memory, GPU, disk, network, apps, this Mac" {
     try t.init(gpa, .init(&a, view.view), .{ .width = 1100, .height = 760, .theme = theme.ui(false) });
     defer t.deinit();
     t.settle(2);
-    try std.testing.expect(t.hasText("Overview") and t.hasText("Busiest Now") and t.hasText("This Mac"));
+    try std.testing.expect(t.hasText("Overview") and t.hasText("Busiest Now"));
+    try std.testing.expect(t.hasText(if (builtin.os.tag == .macos) "This Mac" else "This PC"));
+    try std.testing.expect(!t.hasText(if (builtin.os.tag == .macos) "This PC" else "This Mac"));
     try t.screenshot("/tmp/nanomon-overview.png");
     try open(&t, "CPU");
     try std.testing.expect(t.hasText("Processor Load") and t.hasText("Super Cores") and t.hasText("Efficiency Cores"));
@@ -97,9 +99,21 @@ test "the pages: overview, CPU, memory, GPU, disk, network, apps, this Mac" {
     try std.testing.expect(a.range == .m5 and t.hasText("over 5m") and t.hasText("−4m"));
     try open(&t, "Memory");
     try std.testing.expect(t.hasText("Memory Usage") and t.hasText("Memory by Type") and t.hasText("Using the Most Memory") and t.hasText("Normal"));
+    try std.testing.expect(t.hasText(if (builtin.os.tag == .windows) "Non-paged Pool" else "Wired"));
+    try std.testing.expect(!t.hasText(if (builtin.os.tag == .windows) "Wired" else "Non-paged Pool"));
+    try std.testing.expect(t.hasText("Memory the system compressed to hold more, in place of writing it out."));
+    try std.testing.expect(!t.containsText("Memory Windows compressed"));
     try t.screenshot("/tmp/nanomon-memory.png");
+    const in_use = t.findText("In use").?;
+    t.moveTo(in_use.x + 400, in_use.y + 140);
+    t.settle(1);
+    try std.testing.expect(a.hovers.get(.memory) != null);
+    try std.testing.expect(t.containsText(if (builtin.os.tag == .windows) " · Non-paged Pool " else " · Wired "));
     try open(&t, "GPU");
-    try std.testing.expect(t.hasText("GPU Load") and t.hasText("Renderer"));
+    try std.testing.expect(t.hasText("GPU Load"));
+    try std.testing.expectEqual(builtin.os.tag == .macos, t.hasText("Renderer"));
+    try std.testing.expectEqual(builtin.os.tag == .windows, t.hasText("3D"));
+    try std.testing.expectEqual(builtin.os.tag == .macos, t.hasText("Tiler"));
     try open(&t, "Disk");
     try std.testing.expect(t.hasText("Disk Activity") and t.hasText("Most Written"));
     try std.testing.expect(below(&t, "Mail", "Safari"));
@@ -120,6 +134,56 @@ test "the pages: overview, CPU, memory, GPU, disk, network, apps, this Mac" {
     t.click(pause.x + pause.w + 26, pause.y + pause.h / 2);
     t.settle(1);
     try std.testing.expect(a.paused and t.hasText("Paused"));
+}
+
+test "thermal readings distinguish unavailable from nominal and recover" {
+    const gpa = std.testing.allocator;
+    var a: App = .init(gpa, std.testing.io);
+    defer a.deinit();
+    try fake(&a);
+    var t: ui.Tester = undefined;
+    try t.init(gpa, .init(&a, view.view), .{ .width = 1100, .height = 760, .theme = theme.ui(false) });
+    defer t.deinit();
+    for ([_]app_mod.Page{ .overview, .cpu }) |page| {
+        a.page = page;
+        for ([_]?u8{ null, 0, 1, 2, 3, null, 0 }, [_][]const u8{ "Unavailable", "Nominal", "Fair", "Serious", "Critical", "Unavailable", "Nominal" }) |reading, name| {
+            a.sampler.system.thermal = reading;
+            t.settle(2);
+            try std.testing.expect(t.hasText(name));
+            if (reading == null) try std.testing.expect(!t.hasText("Nominal"));
+        }
+    }
+}
+
+test "idle wake ups are unavailable outside macOS in the table and inspector" {
+    const gpa = std.testing.allocator;
+    var a: App = .init(gpa, std.testing.io);
+    defer a.deinit();
+    try fake(&a);
+    a.page = .processes;
+    a.sampler.procs.items.len = 1;
+    const p = &a.sampler.procs.items[0];
+    p.known = true;
+    p.from_ps = false;
+    p.wakeups = 9876;
+    try std.testing.expectEqual(builtin.os.tag == .macos, p.hasWakeups());
+    var t: ui.Tester = undefined;
+    try t.init(gpa, .init(&a, view.view), .{ .width = 1100, .height = 760, .theme = theme.ui(false) });
+    defer t.deinit();
+    t.settle(2);
+    try std.testing.expect(t.hasText("Idle Wake Ups"));
+    try std.testing.expectEqual(builtin.os.tag == .macos, t.hasText("9876"));
+    a.inspect = p.pid;
+    t.settle(2);
+    try std.testing.expect(t.hasText("Idle Wake Ups:"));
+    try std.testing.expectEqual(builtin.os.tag == .macos, t.hasText("9876"));
+    p.from_ps = true;
+    t.settle(2);
+    try std.testing.expect(!p.hasWakeups() and !t.hasText("9876"));
+    p.from_ps = false;
+    p.known = false;
+    t.settle(2);
+    try std.testing.expect(!p.hasWakeups() and !t.hasText("9876"));
 }
 
 test "the processes page: sorting, the filter, the inspector and the quit sheet" {

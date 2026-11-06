@@ -114,7 +114,7 @@ fn row(c: *ui.Context, a: *App, k: theme.Colors, p: model.Process, i: usize, col
             .cpu => if (p.known) c.print("{d:.1}", .{c.animate(c.peekId(null), 1, p.cpu, 6)}) else "",
             .time => if (p.known) c.print("{s}", .{model.duration(&buf, p.cpu_time_ns)}) else "",
             .threads => if (p.detailed() and p.threads > 0) c.print("{d}", .{p.threads}) else "",
-            .wakeups => if (p.detailed()) c.print("{d}", .{p.wakeups}) else "",
+            .wakeups => if (p.hasWakeups()) c.print("{d}", .{p.wakeups}) else "",
             .memory => if (p.known) c.print("{s}", .{model.bytes(&buf, p.memory)}) else "",
             .written => if (p.detailed()) c.print("{s}", .{model.bytes(&buf, p.disk_written)}) else "",
             .read => if (p.detailed()) c.print("{s}", .{model.bytes(&buf, p.disk_read)}) else "",
