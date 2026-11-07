@@ -70,6 +70,155 @@ pub fn open(t: *ui.Tester, name: []const u8) !void {
     t.settle(1);
 }
 
+/// Card titles sit in a title row directly inside the card.
+fn cardRect(t: *ui.Tester, title: []const u8) !ui.Rect {
+    for (t.ctx.nodes.items) |n| {
+        if (n.content != .text or !std.mem.eql(u8, n.content.text.str, title)) continue;
+        const row = t.ctx.nodes.items[n.parent];
+        return t.ctx.nodes.items[row.parent].rect;
+    }
+    return error.CardNotFound;
+}
+
+test "neighboring cards share their top and bottom edges as content changes" {
+    const gpa = std.testing.allocator;
+    var a: App = .init(gpa, std.testing.io);
+    defer a.deinit();
+    try fake(&a);
+    // Seven busy processes, as in a populated Overview, as well as an
+    // empty list and a list shorter than the machine details.
+    while (a.sampler.procs.items.len < 7) {
+        var p = a.sampler.procs.items[1];
+        p.pid += @intCast(a.sampler.procs.items.len);
+        try a.sampler.procs.append(gpa, p);
+    }
+    for (a.sampler.procs.items) |*p| {
+        p.known = true;
+        p.cpu = @max(p.cpu, 0.8);
+        p.disk_written = @max(p.disk_written, 1024);
+    }
+    const groups = .{
+        .{ app_mod.Page.overview, &[_][]const u8{ "Busiest Now", if (builtin.os.tag == .macos) "This Mac" else "This PC" } },
+        .{ app_mod.Page.cpu, &[_][]const u8{ "Cores", "Activity" } },
+        .{ app_mod.Page.memory, &[_][]const u8{ "Memory by Type", "Pressure", "Swap" } },
+        .{ app_mod.Page.disk, &[_][]const u8{ "Since Boot", "Most Written" } },
+    };
+    var t: ui.Tester = undefined;
+    try t.init(gpa, .init(&a, view.view), .{ .width = 1100, .height = 900, .theme = theme.ui(false) });
+    defer t.deinit();
+    for ([_]f32{ 1100, 1920 }) |width| {
+        t.resize(width, 900);
+        for ([_]usize{ 7, 3, 0 }, [_]u32{ 12, 64, 1 }) |count, cores| {
+            a.sampler.procs.items.len = count;
+            a.sampler.cores = cores;
+            a.sampler.system.cores = cores;
+            a.sampler.system.threads = if (count > 0) 12288 else 0;
+            a.sampler.system.page_ins_sec = if (count > 3) 4096 else 0;
+            a.sampler.system.swap_total = if (count > 3) 1 << 30 else 0;
+            inline for (groups) |group| {
+                a.page = group[0];
+                t.settle(1);
+                const stacked = group[0] == .memory and view.bodyWidth(&t.ctx) < 900;
+                const first = try cardRect(&t, group[1][if (stacked) 1 else 0]);
+                if (stacked) {
+                    const above = try cardRect(&t, group[1][0]);
+                    try std.testing.expect(above.y + above.h + 14 <= first.y + 0.01);
+                }
+                for (group[1][if (stacked) 2 else 1..]) |title| {
+                    const next = try cardRect(&t, title);
+                    try std.testing.expectApproxEqAbs(first.y, next.y, 0.01);
+                    try std.testing.expectApproxEqAbs(first.y + first.h, next.y + next.h, 0.01);
+                    try std.testing.expect(first.w > 0 and next.w > 0);
+                }
+            }
+        }
+        a.sampler.procs.items.len = 7;
+    }
+}
+
+test "memory cards reflow and show complete long names without label or value overlap" {
+    const gpa = std.testing.allocator;
+    var a: App = .init(gpa, std.testing.io);
+    defer a.deinit();
+    try fake(&a);
+    a.page = .memory;
+    var t: ui.Tester = undefined;
+    try t.init(gpa, .init(&a, view.view), .{ .width = 1100, .height = 760, .theme = theme.ui(false) });
+    defer t.deinit();
+    const names = [_][]const u8{
+        "Memory Compression",
+        "An Application With A Very Long Name",
+        "Search Indexer Background Helper",
+        "Browser With Many Helper Processes",
+        "Another Long Application Name",
+        "System Service Host",
+        "Windows Explorer",
+    };
+    a.apps.clearRetainingCapacity();
+    for (names, 0..) |name, i| {
+        try a.apps.append(gpa, .{ .name = name, .bundle = "", .pid = @intCast(990010 + i), .memory = (8 - @as(u64, @intCast(i))) << 30 });
+    }
+    for ([_]f32{ 720, 1100, 1154, 1155, 1280, 1500, 1920 }) |width| {
+        t.resize(width, 760);
+        t.settle(1);
+        const grid = try cardRect(&t, "Memory by App");
+        var cells: usize = 0;
+        for (t.ctx.nodes.items) |node| {
+            if (node.content != .text) continue;
+            const parent = t.ctx.nodes.items[node.parent];
+            if (parent.style.min_height == 22 and parent.style.gap == 6) {
+                try std.testing.expect(node.rect.x >= parent.rect.x - 0.01);
+                try std.testing.expect(node.rect.x + node.rect.w <= parent.rect.x + parent.rect.w + 0.01);
+                try std.testing.expect(node.rect.y + node.rect.h <= parent.rect.y + parent.rect.h + 0.01);
+                const first = t.ctx.nodes.items[parent.first_child];
+                const last = t.ctx.nodes.items[parent.last_child];
+                try std.testing.expect(!last.content.text.style.wrap);
+                try std.testing.expect(first.rect.x + first.rect.w + 12 <= last.rect.x + 0.01);
+            }
+            for (names) |name| {
+                if (!std.mem.eql(u8, node.content.text.str, name)) continue;
+                try std.testing.expect(node.content.text.style.wrap);
+                try std.testing.expect(node.rect.x >= parent.rect.x + parent.style.padding.left - 0.01);
+                try std.testing.expect(node.rect.x + node.rect.w <= parent.rect.x + parent.rect.w - parent.style.padding.right + 0.01);
+                try std.testing.expect(node.rect.y + node.rect.h <= parent.rect.y + parent.rect.h - parent.style.padding.bottom + 0.01);
+                for (node.content.text.lines) |line| try std.testing.expect(line.width <= node.rect.w + 0.01);
+                if (parent.interactive) {
+                    cells += 1;
+                    try std.testing.expect(parent.rect.w >= 156);
+                    try std.testing.expect(parent.rect.x >= grid.x + 16 - 0.01);
+                    try std.testing.expect(parent.rect.x + parent.rect.w <= grid.x + grid.w - 16 + 0.01);
+                    const value = t.ctx.nodes.items[parent.last_child];
+                    try std.testing.expect(node.rect.y + node.rect.h + 6 <= value.rect.y + 0.01);
+                }
+            }
+        }
+        try std.testing.expectEqual(@as(usize, 7), cells);
+    }
+}
+
+test "machine details keep a full processor name and its label on one line" {
+    const Line = struct {
+        fn build(_: *@This(), c: *ui.Context) void {
+            const column = ui.div(c).column().w(288);
+            defer column.end();
+            @import("view_kit.zig").line(c, theme.colors(false), "Chip", "AMD Ryzen 5 5600X 6-Core Processor", null);
+        }
+    };
+    var state: Line = .{};
+    var t: ui.Tester = undefined;
+    try t.init(std.testing.allocator, .init(&state, Line.build), .{ .width = 288 });
+    defer t.deinit();
+    t.settle(1);
+    const label = t.findText("Chip").?;
+    const value = t.findText("AMD Ryzen 5 5600X 6-Core Processor").?;
+    try std.testing.expect(label.x + label.w + 12 <= value.x + 0.01);
+    try std.testing.expect(value.x + value.w <= 288.01);
+    for (t.ctx.nodes.items) |node| {
+        if (node.content == .text and std.mem.eql(u8, node.content.text.str, "Chip"))
+            try std.testing.expectEqual(@as(usize, 1), node.content.text.lines.len);
+    }
+}
+
 test "the pages: overview, CPU, memory, GPU, disk, network, apps, about" {
     const gpa = std.testing.allocator;
     var a: App = .init(gpa, std.testing.io);

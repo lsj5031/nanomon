@@ -81,6 +81,10 @@ fn surfaceDetail(a: *App, buf: []u8) []const u8 {
 }
 
 /// The page under the header, scrolling: cards with room between.
+pub fn bodyWidth(c: *ui.Context) f32 {
+    return @max(0, c.size.w - side.width - 1 - 40);
+}
+
 pub fn body(c: *ui.Context) ui.Div {
     return ui.div(c).column().wFull().grow().scrollY().px(20).pb(20).gap(14);
 }

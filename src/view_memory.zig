@@ -41,11 +41,17 @@ pub fn page(c: *ui.Context, a: *App, k: theme.Colors) void {
     defer body.end();
     usage(c, a, k, 150);
     {
-        const r = ui.div(c).row().wFull().gap(14).itemsStart();
-        defer r.end();
-        byType(c, a, k);
-        pressure(c, a, k);
-        swap(c, a, k);
+        const width = view.bodyWidth(c);
+        const wide = width >= 900;
+        const r = ui.div(c).wFull().gap(14).itemsStretch();
+        const layout = if (wide) r.row() else r.column();
+        defer layout.end();
+        byType(c, a, k, if (wide) width - 550 - 14 else width);
+        const details = ui.div(c).row().w(if (wide) 550 else width).gap(14).itemsStretch();
+        defer details.end();
+        const detail_w = if (wide) 268 else (width - 14) / 2;
+        pressure(c, a, k, detail_w);
+        swap(c, a, k, detail_w);
     }
     appsGrid(c, a, k);
     top(c, a, k);
@@ -82,9 +88,9 @@ pub fn usage(c: *ui.Context, a: *App, k: theme.Colors, h: f32) void {
 }
 
 /// Where the memory goes: a ring of what is in use, and each kind beside it.
-fn byType(c: *ui.Context, a: *App, k: theme.Colors) void {
+fn byType(c: *ui.Context, a: *App, k: theme.Colors, width: f32) void {
     const sy = a.sampler.system;
-    const d = kit.card(c, k).grow().w(0).gap(10);
+    const d = kit.card(c, k).w(width).gap(10);
     defer d.end();
     {
         const t = kit.title(c, "chart.pie", "Memory by Type", k.blue);
@@ -99,7 +105,7 @@ fn byType(c: *ui.Context, a: *App, k: theme.Colors) void {
             nanoui.kit.ring(c, usedPercent(sy) / 100, .{ .size = 96, .color = k.green });
             ui.text(c, "in use", .{ .size = 10.5, .color = k.secondary });
         }
-        const list = ui.div(c).column().grow().w(0).gap(3);
+        const list = ui.div(c).column().w(@max(0, width - 32 - 96 - 16)).gap(3);
         defer list.end();
         var b: [5][32]u8 = undefined;
         // What is available already counts the cache; the rest is free.
@@ -113,10 +119,10 @@ fn byType(c: *ui.Context, a: *App, k: theme.Colors) void {
 }
 
 /// How hard memory is pressed, the pages moving, and the state in a word.
-fn pressure(c: *ui.Context, a: *App, k: theme.Colors) void {
+fn pressure(c: *ui.Context, a: *App, k: theme.Colors, width: f32) void {
     const sy = a.sampler.system;
     const p = sy.pressure;
-    const d = kit.card(c, k).w(268).gap(8);
+    const d = kit.card(c, k).w(width).gap(8);
     defer d.end();
     {
         const t = kit.title(c, "gauge.with.dots.needle.33percent", "Pressure", k.teal);
@@ -138,9 +144,9 @@ fn pressure(c: *ui.Context, a: *App, k: theme.Colors) void {
 }
 
 /// The page file's size, and what it holds.
-fn swap(c: *ui.Context, a: *App, k: theme.Colors) void {
+fn swap(c: *ui.Context, a: *App, k: theme.Colors, width: f32) void {
     const sy = a.sampler.system;
-    const d = kit.card(c, k).w(268).gap(6);
+    const d = kit.card(c, k).w(width).gap(6);
     defer d.end();
     {
         const t = kit.title(c, "arrow.left.arrow.right", "Swap", k.orange);
@@ -186,18 +192,24 @@ fn appsGrid(c: *ui.Context, a: *App, k: theme.Colors) void {
         ui.text(c, "No app's processes could be read.", .{ .size = 11.5, .color = k.secondary });
         return;
     }
-    const r = ui.div(c).row().wFull().gap(10);
-    defer r.end();
+    const width = @max(0, view.bodyWidth(c) - 32);
+    const columns = @min(n, @max(1, @as(usize, @intFromFloat(@floor((width + 10) / 166)))));
+    const cell_w = (width - 10 * @as(f32, @floatFromInt(columns - 1))) / @as(f32, @floatFromInt(columns));
     var b: [32]u8 = undefined;
-    for (best[0..n]) |app| {
-        ui.key(c, c.print("mem-app-{d}", .{app.pid}));
-        const cell = ui.div(c).column().grow().w(0).gap(6).p(10).rounded(8).bg(k.well).hover(k.hover).control();
-        defer cell.end();
-        if (cell.clicked()) a.page = .apps;
-        appIcon(c, a, app.bundle, 22);
-        ui.spacer(c);
-        ui.text(c, app.name, .{ .size = 11.5, .weight = .medium, .color = k.text });
-        ui.text(c, c.print("{s}", .{model.bytes(&b, app.memory)}), .{ .size = 10.5, .mono = true, .color = k.secondary });
+    var start: usize = 0;
+    while (start < n) : (start += columns) {
+        const r = ui.div(c).row().wFull().gap(10).itemsStretch();
+        defer r.end();
+        for (best[start..@min(start + columns, n)]) |app| {
+            ui.key(c, c.print("mem-app-{d}", .{app.pid}));
+            const cell = ui.div(c).column().w(cell_w).gap(6).p(10).rounded(8).bg(k.well).hover(k.hover).control();
+            defer cell.end();
+            if (cell.clicked()) a.page = .apps;
+            appIcon(c, a, app.bundle, 22);
+            ui.text(c, app.name, .{ .size = 11.5, .weight = .medium, .color = k.text, .wrap = true });
+            ui.spacer(c);
+            ui.text(c, c.print("{s}", .{model.bytes(&b, app.memory)}), .{ .size = 10.5, .mono = true, .color = k.secondary });
+        }
     }
 }
 
@@ -220,10 +232,13 @@ fn top(c: *ui.Context, a: *App, k: theme.Colors) void {
     var b: [32]u8 = undefined;
     for (best[0..n]) |app| {
         ui.key(c, c.print("top-app-{d}", .{app.pid}));
-        const r = ui.div(c).row().wFull().gap(10).itemsCenter().h(24);
+        const r = ui.div(c).row().wFull().gap(10).itemsCenter();
+        c.node(r.index).style.min_height = 24;
         defer r.end();
         appIcon(c, a, app.bundle, 16);
-        ui.text(c, app.name, .{ .size = 12, .color = k.text });
+        const name = ui.div(c).column().w(@min(220, view.bodyWidth(c) * 0.35));
+        ui.text(c, app.name, .{ .size = 12, .color = k.text, .wrap = true });
+        name.end();
         if (app.processes > 1) ui.text(c, c.print("{d}", .{app.processes}), .{ .size = 10, .color = k.tertiary });
         kit.bar(c, k, @as(f32, @floatFromInt(app.memory)) / most, k.green);
         const v = ui.div(c).row().w(72).justifyEnd();

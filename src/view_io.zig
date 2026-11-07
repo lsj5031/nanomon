@@ -22,7 +22,7 @@ pub fn disk(c: *ui.Context, a: *App, k: theme.Colors) void {
     const body = view.body(c);
     defer body.end();
     diskLoad(c, a, k, 150);
-    const r = ui.div(c).row().wFull().gap(14).itemsStart();
+    const r = ui.div(c).row().wFull().gap(14).itemsStretch();
     defer r.end();
     {
         const d = kit.card(c, k).w(300).gap(4);

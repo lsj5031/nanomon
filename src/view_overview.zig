@@ -29,7 +29,7 @@ pub fn page(c: *ui.Context, a: *App, k: theme.Colors) void {
     defer body.end();
     const mem: f32 = if (sy.mem_total > 0) @floatCast(@as(f64, @floatFromInt(sy.memUsed())) / @as(f64, @floatFromInt(sy.mem_total)) * 100) else 0;
     {
-        const r = ui.div(c).row().wFull().gap(14);
+        const r = ui.div(c).row().wFull().gap(14).itemsStretch();
         defer r.end();
         if (tile(c, k, "cpu", "CPU", k.accent, c.print("{d:.0}%", .{sy.cpuBusy()}), c.print("user {d:.0}% · system {d:.0}%", .{ sy.cpu_user, sy.cpu_system }))) a.page = .cpu;
         kit.dots(c, k, a, &.{ .{ .values = s.system_history.slice(), .color = k.system }, .{ .values = s.user_history.slice(), .color = k.user } }, 100, mini_h, false, null);
@@ -39,7 +39,7 @@ pub fn page(c: *ui.Context, a: *App, k: theme.Colors) void {
         c.end();
     }
     {
-        const r = ui.div(c).row().wFull().gap(14);
+        const r = ui.div(c).row().wFull().gap(14).itemsStretch();
         defer r.end();
         if (tile(c, k, "cube", "GPU", k.red, c.print("{d:.0}%", .{sy.gpu}), c.print("{s} in use", .{model.bytes(&b[0], sy.gpu_memory)}))) a.page = .gpu;
         kit.dots(c, k, a, &.{.{ .values = s.gpu_history.slice(), .color = k.red }}, 100, mini_h, false, null);
@@ -51,7 +51,7 @@ pub fn page(c: *ui.Context, a: *App, k: theme.Colors) void {
         kit.dots(c, k, a, &.{ .{ .values = s.in_history.slice(), .color = k.teal }, .{ .values = s.out_history.slice(), .color = k.blue } }, null, mini_h, false, null);
         c.end();
     }
-    const r = ui.div(c).row().wFull().gap(14).itemsStart();
+    const r = ui.div(c).row().wFull().gap(14).itemsStretch();
     defer r.end();
     busiest(c, a, k);
     machine(c, a, k);

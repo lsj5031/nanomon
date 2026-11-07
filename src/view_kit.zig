@@ -83,9 +83,10 @@ pub fn stat(c: *ui.Context, k: theme.Colors, label: []const u8, value: []const u
 
 /// A line of a list: the label on the left, the value on the right.
 pub fn line(c: *ui.Context, k: theme.Colors, label: []const u8, value: []const u8, color: ?ui.Color) void {
-    const r = ui.div(c).row().wFull().itemsCenter().h(22);
+    const r = ui.div(c).row().wFull().gap(6).itemsCenter();
+    c.node(r.index).style.min_height = 22;
     defer r.end();
-    ui.text(c, label, .{ .size = 12, .color = k.secondary });
+    ui.text(c, label, .{ .size = 12, .color = k.secondary, .wrap = true });
     ui.spacer(c);
     ui.text(c, value, .{ .size = 12, .weight = .medium, .mono = true, .color = color orelse k.text });
 }
@@ -161,7 +162,7 @@ pub fn ranges(c: *ui.Context, a: *App, k: theme.Colors) void {
     const all = [_]app_mod.Range{ .m1, .m5, .m15, .h1 };
     var names: [all.len][]const u8 = undefined;
     for (all, 0..) |r, i| names[i] = r.title();
-    if (segmented(c, k, &names, @intFromEnum(a.range))) |i| a.range = all[i];
+    if (segmented(c, k, &names, @backingInt(a.range))) |i| a.range = all[i];
     ui.key(c, "pause");
     const d = ui.div(c).row().w(30).h(26).center().rounded(8).bg(k.control).hover(k.hover).control();
     defer d.end();
